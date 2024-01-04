@@ -56,12 +56,7 @@ int main(int argc, char* argv[]) {
     int num_seats;
     char* xs;
     char* ys;
-    int fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-
-    if (fd == -1) {
-        perror("Erro ao abrir o arquivo de output");
-        exit(1);
-    }
+    
     if(session_count!=MAX_SESSION_COUNT){
       ssize_t bytes_read = read(fserv, session_request, sizeof(char*82));
       if (bytes_read == -1) {
@@ -117,7 +112,7 @@ int main(int argc, char* argv[]) {
       break;
     case 5:
       memcpy(&event_id, request_msg + 1);
-      result=ems_show(fd,event_id);
+      result=ems_show(fserv,event_id);
       //RESULT IS TO BE CONCATENATED WITH NUM_ROWS, NUM_COLS AND SEATS
       ssize_t bytes_written = write(response_pipe, result, sizeof(result));
       if (bytes_written == -1) {
@@ -126,7 +121,7 @@ int main(int argc, char* argv[]) {
       }
       break;
     case 6:
-      result=ems_list_events(fd);
+      result=ems_list_events(fserv);
       //RESULT IS TO BE CONCATENATED WITH NUM_EVENTS AND IDS
       ssize_t bytes_written = write(response_pipe, result, sizeof(result));
       if (bytes_written == -1) {
