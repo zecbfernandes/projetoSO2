@@ -154,6 +154,12 @@ int ems_show(int out_fd, unsigned int event_id) {
         perror("Erro ao ler a resposta do servidor");
         return 1;
     }
+    
+    size_t bytes_written = write(out_fd, server_response, sizeof(server_response));
+    if (bytes_written == -1) {
+        perror("Erro ao escrever no out_fd");
+        return 1; 
+    }
   return server_response;
 
 }
@@ -165,7 +171,7 @@ int ems_list_events(int out_fd) {
   request_msg[0] = OP_CODE;
   
 
-  ssize_t bytes_written = write(user->req_pipe, request_msg, sizeof(request_msg));
+    ssize_t bytes_written = write(user->req_pipe, request_msg, sizeof(request_msg));
     if (bytes_written == -1) {
         perror("Erro ao escrever no pipe de solicitações");
         return 1; 
@@ -177,6 +183,12 @@ int ems_list_events(int out_fd) {
     if (bytes_read == -1) {
         perror("Erro ao ler a resposta do servidor");
         return 1;
+    }
+
+    size_t bytes_written = write(out_fd, server_response, sizeof(server_response));
+    if (bytes_written == -1) {
+        perror("Erro ao escrever no out_fd");
+        return 1; 
     }
   return server_response;
   
