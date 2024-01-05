@@ -32,6 +32,11 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t *xs, size_t *ys)
 /// @return 0 if the event was printed successfully, 1 otherwise.
 int ems_show(int out_fd, unsigned int event_id);
 
+/// Shows all events
+/// @param out_fd File descriptor to print the event to.
+/// @return 0 if the event was printed successfully, 1 otherwise.
+int ems_show_all(int out_fd);
+
 /// Prints all the events.
 /// @param out_fd File descriptor to print the events to.
 /// @return 0 if the events were printed successfully, 1 otherwise.

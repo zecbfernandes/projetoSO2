@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE 700
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,10 +8,17 @@
 #include <sys/types.h> 
 #include <sys/stat.h> 
 #include <string.h> 
+#include <signal.h>
 #include "common/constants.h"
 #include "common/io.h"
 #include "operations.h"
 #include <pthread.h>
+
+void sigusr1_handler(int signo) {
+    sigusr1_received = 1;
+}
+
+volatile sig_atomic_t sigusr1_received = 0;
 
 #define BUFFER_SIZE 10
 
@@ -24,6 +33,24 @@ pthread_cond_t cond_consumer = PTHREAD_COND_INITIALIZER;
 
 // Function that the host thread will execute (producer)
 void* host_thread(void* arg) {
+  // Bloqueia tids != 0
+  if(!thread_equal(thread_self(), 0)) 
+  {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGUSR1);
+    if (pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
+      perror("Error blocking SIGUSR1 in threads");
+      exit(EXIT_FAILURE);
+    }
+  };
+
+  // Recebe signal
+  if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
+      perror("Error setting up signal handler");
+      exit(EXIT_FAILURE);
+  }
+
   int* args = (int*)arg;
   char* request_msg='\0';
   char* session_request='\0';
@@ -71,6 +98,18 @@ void* host_thread(void* arg) {
 
 // Function that each working thread will execute (consumer)
 void* worker_thread(void* arg) {
+  // Bloqueia tids != 0
+  if(!thread_equal(thread_self(), 0)) 
+  {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGUSR1);
+    if (pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0) {
+      perror("Error blocking SIGUSR1 in threads");
+      exit(EXIT_FAILURE);
+    }
+  };
+
   int* args = (int*)arg;
   int result;
   int OP_CODE;
@@ -92,6 +131,11 @@ void* worker_thread(void* arg) {
   session_id=args[3];
 
   while (1) {
+    if (sigusr1_received) {
+        ems_list_events(fresp);
+        ems_show_all(fresp);
+        sigusr1_received = 0;
+      }
     pthread_mutex_lock(&mutex);
 
     while (count == 0) {
