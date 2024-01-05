@@ -2,7 +2,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "common/constants.h"
+#include <string.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct client{
   int session_id;
@@ -16,8 +21,8 @@ struct client user;
 
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
   //TODO: create pipes and connect to the server
-  int freq, fresp;
-  int OP_CODE=1;
+  int freq, fresp,fserv;
+  char OP_CODE=1;
 
   unlink(req_pipe_path);
   unlink(resp_pipe_path);
@@ -31,6 +36,8 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
 	  exit(1);
   if ((fresp = open(resp_pipe_path, O_WRONLY)) < 0)
 	  exit(1);
+  if ((fserv = open(server_pipe_path, O_RDONLY)) < 0)
+	  exit(1);
 
   user.req_pipe=freq;
   user.resp_pipe=fresp;
@@ -38,11 +45,11 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
   strcpy(user.resp_path, resp_pipe_path);
 
   char request_msg[1 + sizeof(char)*40 + sizeof(char)*40];
-  request_msg[0] = OP_CODE;
+  request_msg[0]=OP_CODE;
   memcpy(request_msg + 1, &req_pipe_path, sizeof(char)*40);
   memcpy(request_msg + 1 + sizeof(unsigned int), &resp_pipe_path, sizeof(char)*40); 
 
-  ssize_t bytes_written = write(user.req_pipe, request_msg, sizeof(request_msg));
+  ssize_t bytes_written = write(fserv, request_msg, sizeof(request_msg));
     if (bytes_written == -1) {
         perror("Erro ao escrever no pipe de solicitações");
         return 1; 
@@ -50,7 +57,7 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
 
     // Ler a resposta do servidor do pipe de respostas
     int server_response;
-    ssize_t bytes_read = read(user.resp_pipe, &server_response, sizeof(server_response));
+    ssize_t bytes_read = read(fserv, &server_response, sizeof(server_response));
     if (bytes_read == -1) {
         perror("Erro ao ler a resposta do servidor");
         return 1;
@@ -63,7 +70,7 @@ int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const*
 
 int ems_quit(void) { 
   //TODO: close pipes
-  int OP_CODE=2;
+  char OP_CODE=2;
   char request_msg[1];
   request_msg[0] = OP_CODE;
   
@@ -78,14 +85,12 @@ int ems_quit(void) {
   close(user.resp_pipe);
   unlink(user.resp_path);
   unlink(user.req_path);
-  free(user.req_path);
-  free(user.resp_path);
   return 0;
 }
 
 int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
   //TODO: send create request to the server (through the request pipe) and wait for the response (through the response pipe)
-  int OP_CODE=3;
+  char OP_CODE=3;
   char request_msg[1 + sizeof(unsigned int) + sizeof(size_t) + sizeof(size_t)];
   request_msg[0] = OP_CODE;
   memcpy(request_msg + 1, &event_id, sizeof(unsigned int));
@@ -110,7 +115,7 @@ int ems_create(unsigned int event_id, size_t num_rows, size_t num_cols) {
 
 int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys) {
   //TODO: send reserve request to the server (through the request pipe) and wait for the response (through the response pipe)
-  int OP_CODE=4;
+  char OP_CODE=4;
   char request_msg[1 + sizeof(unsigned int) + sizeof(size_t) + sizeof(size_t)*40 + sizeof(size_t)*40];
   request_msg[0] = OP_CODE;
   memcpy(request_msg + 1, &event_id, sizeof(unsigned int));
@@ -136,8 +141,9 @@ int ems_reserve(unsigned int event_id, size_t num_seats, size_t* xs, size_t* ys)
 
 int ems_show(int out_fd, unsigned int event_id) {
   //TODO: send show request to the server (through the request pipe) and wait for the response (through the response pipe)
-  int OP_CODE=5;
+  char OP_CODE=5;
   char request_msg[1 + sizeof(unsigned int)];
+  char* str='\0';
   request_msg[0] = OP_CODE;
   memcpy(request_msg + 1, &event_id, sizeof(unsigned int));
 
@@ -154,8 +160,8 @@ int ems_show(int out_fd, unsigned int event_id) {
         perror("Erro ao ler a resposta do servidor");
         return 1;
     }
-    
-    size_t bytes_written = write(out_fd, server_response, sizeof(server_response));
+    sprintf(str, "%d", server_response);
+    bytes_written = write(out_fd, str, sizeof(server_response));
     if (bytes_written == -1) {
         perror("Erro ao escrever no out_fd");
         return 1; 
@@ -166,8 +172,9 @@ int ems_show(int out_fd, unsigned int event_id) {
 
 int ems_list_events(int out_fd) {
   //TODO: send list request to the server (through the request pipe) and wait for the response (through the response pipe)
-  int OP_CODE=6;
+  char OP_CODE=6;
   char request_msg[1];
+  char* str='\0';
   request_msg[0] = OP_CODE;
   
 
@@ -184,8 +191,8 @@ int ems_list_events(int out_fd) {
         perror("Erro ao ler a resposta do servidor");
         return 1;
     }
-
-    size_t bytes_written = write(out_fd, server_response, sizeof(server_response));
+    sprintf(str, "%d", server_response);
+    bytes_written = write(out_fd, str, sizeof(server_response));
     if (bytes_written == -1) {
         perror("Erro ao escrever no out_fd");
         return 1; 

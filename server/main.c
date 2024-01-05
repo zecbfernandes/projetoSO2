@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-
+#include <sys/types.h> 
+#include <sys/stat.h> 
+#include <string.h> 
 #include "common/constants.h"
 #include "common/io.h"
 #include "operations.h"
@@ -47,32 +49,45 @@ int main(int argc, char* argv[]) {
     //TODO: Read from pipe
     int result;
     char* request_msg;
-    char* session_request;
+    char* session_request='\0';
     char* request_pipe;
     char* response_pipe;
     int OP_CODE;
     unsigned int event_id;
     size_t num_rows, num_cols;
-    int num_seats;
-    char* xs;
-    char* ys;
-    
+    size_t num_seats;
+    size_t * xs;
+    size_t * ys;
+    ssize_t bytes_read;
+    ssize_t bytes_written;
+    int freq, fresp;
+    int session_id;
+
     if(session_count!=MAX_SESSION_COUNT){
-      ssize_t bytes_read = read(fserv, session_request, sizeof(char)*82);
+      bytes_read = read(fserv, session_request, sizeof(char)*82);
       if (bytes_read == -1) {
         perror("Error reading from server pipe");
         break;  
       }
+      strncpy(request_pipe,session_request+1,40);
+      strncpy(response_pipe,session_request+41,40);
+
+      if ((freq = open(request_pipe, O_RDONLY)) < 0)
+	      exit(1);
+      if ((fresp = open(response_pipe, O_WRONLY)) < 0)
+	      exit(1);
+
+      session_count+=1;
+      session_id=session_count;
+      bytes_written = write(fserv, session_id, sizeof(char)*82);
+      if (bytes_written == -1) {
+        perror("Error reading from server pipe");
+        break;  
+      }
     }
-
-    strncpy(request_pipe,session_request+1,40);
-    strncpy(response_pipe,session_request+41,40);
-
-    int session_id=session_count;
-    session_count+=1;
     
     if(request_pipe!=NULL && *request_pipe != '\0'){
-      ssize_t bytes_read = read(request_pipe, request_msg, sizeof(request_msg));
+     bytes_read = read(freq, request_msg, sizeof(request_msg));
       if (bytes_read == -1) {
         perror("Error reading from server pipe");
         break;  
@@ -89,7 +104,7 @@ int main(int argc, char* argv[]) {
       memcpy(&num_rows, request_msg + 1 + sizeof(unsigned int), sizeof(size_t));
       memcpy(&num_cols, request_msg + 1 + sizeof(unsigned int) + sizeof(size_t), sizeof(size_t));
       result = ems_create(event_id,num_rows,num_cols);
-      ssize_t bytes_written = write(response_pipe, result, sizeof(result));
+      bytes_written = write(fresp, &result, sizeof(result));
       if (bytes_written == -1) {
         perror("Error writing on response pipe");
         break;
@@ -104,17 +119,17 @@ int main(int argc, char* argv[]) {
 
       result=ems_reserve(event_id,num_seats,xs,ys);
 
-      ssize_t bytes_written = write(response_pipe, result, sizeof(result));
+      bytes_written = write(fresp, &result, sizeof(result));
       if (bytes_written == -1) {
         perror("Error writing on response pipe");
         break;
       }
       break;
     case 5:
-      memcpy(&event_id, request_msg + 1);
+      memcpy(&event_id, request_msg + 1,sizeof(unsigned int));
       result=ems_show(fserv,event_id);
       //RESULT IS TO BE CONCATENATED WITH NUM_ROWS, NUM_COLS AND SEATS
-      ssize_t bytes_written = write(response_pipe, result, sizeof(result));
+      bytes_written = write(fresp, &result, sizeof(result));
       if (bytes_written == -1) {
         perror("Error writing on response pipe");
         break;
@@ -123,7 +138,7 @@ int main(int argc, char* argv[]) {
     case 6:
       result=ems_list_events(fserv);
       //RESULT IS TO BE CONCATENATED WITH NUM_EVENTS AND IDS
-      ssize_t bytes_written = write(response_pipe, result, sizeof(result));
+      bytes_written = write(fresp, &result, sizeof(result));
       if (bytes_written == -1) {
         perror("Error writing on response pipe");
         break;
