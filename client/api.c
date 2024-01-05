@@ -16,7 +16,7 @@ struct client{
   char req_path[40];
   char resp_path[40];
 };
-
+ 
 struct client user;
 
 int ems_setup(char const* req_pipe_path, char const* resp_pipe_path, char const* server_pipe_path) {
