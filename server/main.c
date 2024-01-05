@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   //TODO: Intialize server
-  char* server_pipe=argc[2];
+  char* server_pipe=argv[1];
   int fserv;
 
   if (mkfifo(server_pipe, 0777) < 0)
@@ -58,20 +58,20 @@ int main(int argc, char* argv[]) {
     char* ys;
     
     if(session_count!=MAX_SESSION_COUNT){
-      ssize_t bytes_read = read(fserv, session_request, sizeof(char*82));
+      ssize_t bytes_read = read(fserv, session_request, sizeof(char)*82);
       if (bytes_read == -1) {
         perror("Error reading from server pipe");
         break;  
       }
     }
 
-    strcpy(request_pipe,session_request+1,40);
-    strcpy(response_pipe,session_request+41,40);
+    strncpy(request_pipe,session_request+1,40);
+    strncpy(response_pipe,session_request+41,40);
 
     int session_id=session_count;
     session_count+=1;
     
-    if(request_pipe!=NULL){
+    if(request_pipe!=NULL && *request_pipe != '\0'){
       ssize_t bytes_read = read(request_pipe, request_msg, sizeof(request_msg));
       if (bytes_read == -1) {
         perror("Error reading from server pipe");
@@ -138,7 +138,6 @@ int main(int argc, char* argv[]) {
     free(session_request);
     free(request_pipe);
     free(response_pipe);
-    close(fd);
   }
   //TODO: Close Server
   close(fserv);
