@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     int freq, fresp;
     int session_id;
     char* str='\0';
-
+	
     if(session_count!=MAX_SESSION_COUNT){
       bytes_read = read(fserv, session_request, sizeof(char)*82);
       if (bytes_read == -1) {
@@ -129,22 +129,12 @@ int main(int argc, char* argv[]) {
       break;
     case 5:
       memcpy(&event_id, request_msg + 1,sizeof(unsigned int));
-      result=ems_show(fserv,event_id);
+      ems_show(fresp,event_id);
       //RESULT IS TO BE CONCATENATED WITH NUM_ROWS, NUM_COLS AND SEATS
-      bytes_written = write(fresp, &result, sizeof(result));
-      if (bytes_written == -1) {
-        perror("Error writing on response pipe");
-        break;
-      }
       break;
     case 6:
-      result=ems_list_events(fserv);
+      ems_list_events(fresp);
       //RESULT IS TO BE CONCATENATED WITH NUM_EVENTS AND IDS
-      bytes_written = write(fresp, &result, sizeof(result));
-      if (bytes_written == -1) {
-        perror("Error writing on response pipe");
-        break;
-      }
       break;
 
     default:
