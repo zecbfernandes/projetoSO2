@@ -48,20 +48,21 @@ int main(int argc, char* argv[]) {
   while (1) {
     //TODO: Read from pipe
     int result;
-    char* request_msg;
+    char* request_msg='\0';
     char* session_request='\0';
-    char* request_pipe;
-    char* response_pipe;
+    char* request_pipe='\0';
+    char* response_pipe='\0';
     int OP_CODE;
     unsigned int event_id;
     size_t num_rows, num_cols;
     size_t num_seats;
-    size_t * xs;
-    size_t * ys;
+    size_t * xs=0;
+    size_t * ys=0;
     ssize_t bytes_read;
     ssize_t bytes_written;
     int freq, fresp;
     int session_id;
+    char* str='\0';
 
     if(session_count!=MAX_SESSION_COUNT){
       bytes_read = read(fserv, session_request, sizeof(char)*82);
@@ -79,7 +80,8 @@ int main(int argc, char* argv[]) {
 
       session_count+=1;
       session_id=session_count;
-      bytes_written = write(fserv, session_id, sizeof(char)*82);
+      sprintf(str, "%d", session_id);
+      bytes_written = write(fserv, str, sizeof(char)*82);
       if (bytes_written == -1) {
         perror("Error reading from server pipe");
         break;  
